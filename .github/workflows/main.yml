@@ -105,9 +105,9 @@ jobs:
           
           REPO_OWNER=$(echo $GITHUB_REPOSITORY | cut -d'/' -f1)
           REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)
-          UPDATE_INFO="gh-releases-zsync|\${REPO_OWNER}|\${REPO_NAME}|latest|GearLever-x86_64.AppImage.zsync"
+          UPDATE_INFO="gh-releases-zsync|${REPO_OWNER}|${REPO_NAME}|latest|GearLever-x86_64.AppImage.zsync"
           
-          ./appimagetool -u "\$UPDATE_INFO" GearLever.AppDir GearLever-x86_64.AppImage
+          ./appimagetool -u "$UPDATE_INFO" GearLever.AppDir GearLever-x86_64.AppImage
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
