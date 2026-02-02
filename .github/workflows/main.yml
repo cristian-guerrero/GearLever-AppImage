@@ -67,11 +67,23 @@ jobs:
           chmod +x "$APP_DIR/AppRun"
           
           # 2. Copy desktop file and icons to root
+          echo "Listing contents of AppDir for debugging:"
+          ls -R "$APP_DIR/usr/share/icons" || echo "No icons found"
+          
           cp "$APP_DIR/usr/share/applications/"*.desktop "$APP_DIR/gearlever.desktop"
           
-          # Improved Icon Detection
-          find "$APP_DIR/usr/share/icons" -name "*gearlever*" -name "*.png" -exec cp {} "$APP_DIR/gearlever.png" \; -quit || \
-          find "$APP_DIR/usr/share/icons" -name "*.png" -exec cp {} "$APP_DIR/gearlever.png" \; -quit || true
+          # More aggressive icon detection (case-insensitive and looking for any icon)
+          ICON_PATH=$(find "$APP_DIR/usr/share/icons" -iname "*gearlever*" -name "*.png" | head -n 1)
+          if [ -z "$ICON_PATH" ]; then
+            ICON_PATH=$(find "$APP_DIR/usr/share/icons" -name "*.png" | head -n 1)
+          fi
+          
+          if [ -n "$ICON_PATH" ]; then
+            echo "Found icon at $ICON_PATH, copying to $APP_DIR/gearlever.png"
+            cp "$ICON_PATH" "$APP_DIR/gearlever.png"
+          else
+            echo "WARNING: No icon found!"
+          fi
           
           # 3. Patch desktop file to match AppImage icon
           sed -i 's/Icon=.*/Icon=gearlever/' "$APP_DIR/gearlever.desktop"

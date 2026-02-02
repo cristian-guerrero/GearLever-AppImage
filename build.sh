@@ -43,9 +43,14 @@ exec "\${HERE}/usr/bin/gearlever" "\$@"
 EOF
 chmod +x "$APP_DIR/AppRun"
 
-# Improved Icon Detection
-find "$APP_DIR/usr/share/icons" -name "*gearlever*" -name "*.png" -exec cp {} "$APP_DIR/gearlever.png" \; -quit || \
-find "$APP_DIR/usr/share/icons" -name "*.png" -exec cp {} "$APP_DIR/gearlever.png" \; -quit || true
+# More aggressive icon detection
+ICON_PATH=$(find "$APP_DIR/usr/share/icons" -iname "*gearlever*" -name "*.png" | head -n 1)
+if [ -z "$ICON_PATH" ]; then
+  ICON_PATH=$(find "$APP_DIR/usr/share/icons" -name "*.png" | head -n 1)
+fi
+if [ -n "$ICON_PATH" ]; then
+  cp "$ICON_PATH" "$APP_DIR/gearlever.png"
+fi
 
 cp "$APP_DIR/usr/share/applications/"*.desktop "$APP_DIR/gearlever.desktop"
 sed -i 's/Icon=.*/Icon=gearlever/' "$APP_DIR/gearlever.desktop"
