@@ -43,26 +43,27 @@ cp build-aux/get_appimage_offset.sh ../GearLever.AppDir/usr/bin/get_appimage_off
 chmod +x ../GearLever.AppDir/usr/bin/get_appimage_offset
 
 # Bundle extraction tools (7zz and unsquashfs)
-echo "Bundling extraction tools..."
+echo "Preparing extraction tools..."
+mkdir -p ../tools
 if command -v 7zz >/dev/null 2>&1; then
-  cp $(command -v 7zz) ../GearLever.AppDir/usr/bin/7zz
-  chmod +x ../GearLever.AppDir/usr/bin/7zz
+  cp -L $(command -v 7zz) ../tools/7zz
 else
   echo "Warning: 7zz not found. Downloading..."
-  wget -q https://github.com/ip7z/7zip/releases/download/24.09/7z2409-linux-x64.tar.xz -O 7z.tar.xz
-  tar -xf 7z.tar.xz 7zz
-  cp 7zz ../GearLever.AppDir/usr/bin/7zz
-  rm 7z.tar.xz 7zz
+  wget -q https://github.com/ip7z/7zip/releases/download/24.09/7z2409-linux-x64.tar.xz -O ../tools/7z.tar.xz
+  tar -xf ../tools/7z.tar.xz -C ../tools 7zz
+  rm ../tools/7z.tar.xz
 fi
 
 if command -v unsquashfs >/dev/null 2>&1; then
-  cp $(command -v unsquashfs) ../GearLever.AppDir/usr/bin/unsquashfs
-  chmod +x ../GearLever.AppDir/usr/bin/unsquashfs
+  cp -L $(command -v unsquashfs) ../tools/unsquashfs
 else
-  echo "Warning: unsquashfs not found. Downloading from AppImageKit..."
-  wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/unsquashfs-x86_64 -O ../GearLever.AppDir/usr/bin/unsquashfs
-  chmod +x ../GearLever.AppDir/usr/bin/unsquashfs
+  echo "Warning: unsquashfs not found. Downloading..."
+  wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/unsquashfs-x86_64 -O ../tools/unsquashfs
 fi
+chmod +x ../tools/7zz ../tools/unsquashfs
+
+# Copy them to AppDir initially (sharun will overwrite them with its own wrappers if requested)
+cp ../tools/7zz ../tools/unsquashfs ../GearLever.AppDir/usr/bin/
 
 cd ..
 
@@ -169,7 +170,8 @@ STATIC_FILE_UPDATER_PY=$(find "$APP_DIR" -name "StaticFileUpdater.py" | head -n 
 if [ -n "$STATIC_FILE_UPDATER_PY" ]; then
   echo "Patching StaticFileUpdater in $STATIC_FILE_UPDATER_PY"
   # Avoid StaticFileUpdater trying to handle gh-releases-zsync links
-  sed -i "s|if not url_is_valid(url):|if not url_is_valid(url) or url.startswith('gh-releases-zsync\|'):|" "$STATIC_FILE_UPDATER_PY"
+  # Using @ as delimiter to avoid issues with | or /
+  sed -i "s@if not url_is_valid(url):@if not url_is_valid(url) or url.startswith('gh-releases-zsync|'):@" "$STATIC_FILE_UPDATER_PY"
 fi
 
 # 6. Build the AppImage via sharun (for portability)
@@ -219,13 +221,13 @@ SHARUN_ARGS+=(
   /usr/lib/x86_64-linux-gnu/libsqlite3.so.0
 )
 
-# Use the tools we just copied/downloaded to ensure their dependencies are bundled
-if [ -f "$APP_DIR/usr/bin/7zz" ]; then
-  SHARUN_ARGS+=( "$APP_DIR/usr/bin/7zz" )
+# Use the tools we prepared to ensure their dependencies are bundled
+if [ -f "tools/7zz" ]; then
+  SHARUN_ARGS+=( "$PWD/tools/7zz" )
 fi
 
-if [ -f "$APP_DIR/usr/bin/unsquashfs" ]; then
-  SHARUN_ARGS+=( "$APP_DIR/usr/bin/unsquashfs" )
+if [ -f "tools/unsquashfs" ]; then
+  SHARUN_ARGS+=( "$PWD/tools/unsquashfs" )
 fi
 
 ./sharun lib4bin "${SHARUN_ARGS[@]}"
