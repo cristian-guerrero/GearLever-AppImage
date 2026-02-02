@@ -117,7 +117,7 @@ mkdir -p "$APP_DIR/usr/lib/python3/dist-packages"
 cp -ra /usr/lib/python3/dist-packages/. "$APP_DIR/usr/lib/python3/dist-packages/"
 
 # Install missing dependencies from pip
-python3 -m pip install --target "$APP_DIR/usr/lib/python3/dist-packages" desktop-entry-lib
+python3 -m pip install --target "$APP_DIR/usr/lib/python3/dist-packages" desktop-entry-lib ftputil
 
 # Bundle GObject Introspection typelibs
 mkdir -p "$APP_DIR/usr/lib/x86_64-linux-gnu/girepository-1.0"

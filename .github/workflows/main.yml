@@ -150,7 +150,7 @@ jobs:
           cp -ra /usr/lib/python3/dist-packages/. GearLever.AppDir/usr/lib/python3/dist-packages/
           
           # Install missing dependencies from pip
-          python3 -m pip install --target GearLever.AppDir/usr/lib/python3/dist-packages desktop-entry-lib
+          python3 -m pip install --target GearLever.AppDir/usr/lib/python3/dist-packages desktop-entry-lib ftputil
           
           # Bundle GObject Introspection typelibs (required for gi.require_version)
           mkdir -p GearLever.AppDir/usr/lib/x86_64-linux-gnu/girepository-1.0
