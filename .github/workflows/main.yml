@@ -72,6 +72,7 @@ jobs:
           # GTK/GIO Portability
           export XDG_DATA_DIRS="\${HERE}/usr/share:\${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
           export GSETTINGS_SCHEMA_DIR="\${HERE}/usr/share/glib-2.0/schemas"
+          export GI_TYPELIB_PATH="\${HERE}/usr/lib/x86_64-linux-gnu/girepository-1.0"
           
           # Use the bundled python from sharun
           if [ -f "\${HERE}/bin/python3" ]; then
@@ -146,6 +147,10 @@ jobs:
           mkdir -p GearLever.AppDir/usr/lib/python3/dist-packages
           # Copy all installed dist-packages to ensure no missing dependencies
           cp -ra /usr/lib/python3/dist-packages/. GearLever.AppDir/usr/lib/python3/dist-packages/
+          
+          # Bundle GObject Introspection typelibs (required for gi.require_version)
+          mkdir -p GearLever.AppDir/usr/lib/x86_64-linux-gnu/girepository-1.0
+          cp -ra /usr/lib/x86_64-linux-gnu/girepository-1.0/. GearLever.AppDir/usr/lib/x86_64-linux-gnu/girepository-1.0/
           
           # Use sharun to bundle everything: Python, GTK4, Libadwaita and their dependencies
           # This ensures the AppImage is standalone for immutable systems like NixOS/SteamOS

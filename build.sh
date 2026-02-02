@@ -52,6 +52,7 @@ export PYTHONPATH="\${HERE}/usr/share/gearlever:\${HERE}/usr/lib/python3.12:\${H
 # GTK/GIO Portability
 export XDG_DATA_DIRS="\${HERE}/usr/share:\${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 export GSETTINGS_SCHEMA_DIR="\${HERE}/usr/share/glib-2.0/schemas"
+export GI_TYPELIB_PATH="\${HERE}/usr/lib/x86_64-linux-gnu/girepository-1.0"
 
 # Use the bundled python from sharun
 if [ -f "\${HERE}/bin/python3" ]; then
@@ -114,6 +115,10 @@ cp -ra /usr/lib/python3.12/. "$APP_DIR/usr/lib/python3.12/"
 # Also the dependencies installed via apt (gi, requests, xdg, dbus, magic)
 mkdir -p "$APP_DIR/usr/lib/python3/dist-packages"
 cp -ra /usr/lib/python3/dist-packages/. "$APP_DIR/usr/lib/python3/dist-packages/"
+
+# Bundle GObject Introspection typelibs
+mkdir -p "$APP_DIR/usr/lib/x86_64-linux-gnu/girepository-1.0"
+cp -ra /usr/lib/x86_64-linux-gnu/girepository-1.0/. "$APP_DIR/usr/lib/x86_64-linux-gnu/girepository-1.0/"
 
 # 2. Bundle the python interpreter and its dependencies.
 # We also bundle libadwaita/gtk4 as they are loaded via GI (dlopen)
