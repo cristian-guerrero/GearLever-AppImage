@@ -73,8 +73,15 @@ fi
 cp "$APP_DIR/usr/share/applications/"*.desktop "$APP_DIR/gearlever.desktop"
 sed -i 's/Icon=.*/Icon=gearlever/' "$APP_DIR/gearlever.desktop"
 
-# 6. Build the AppImage
-# We use appimagetool to finish the job
+# 6. Build the AppImage via sharun (for portability)
+# We use sharun to bundle dependencies for immutable systems
+wget -q https://github.com/VHSgunzo/sharun/releases/download/v0.7.9/sharun-x86_64 -O sharun
+chmod +x sharun
+
+# Bundle the AppDir
+./sharun --dir "$APP_DIR" --bin "$APP_DIR/usr/bin/gearlever" --args "" -v --p 1
+
+# Final AppImage creation
 wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
 chmod +x appimagetool
 

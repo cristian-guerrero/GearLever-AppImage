@@ -107,13 +107,14 @@ jobs:
         run: |
           cd build
           
-          # Use a tool specifically designed for bundling GTK/Python apps
-          wget -q https://raw.githubusercontent.com/base-pkgforge/pkgforge-scripts/main/sharun-utils/quick-sharun.sh
-          chmod +x quick-sharun.sh
+          # Use sharun to bundle everything: Python, GTK4, Libadwaita and their dependencies
+          # This ensures the AppImage is standalone for immutable systems like NixOS/SteamOS
+          wget -q https://github.com/VHSgunzo/sharun/releases/download/v0.7.9/sharun-x86_64 -O sharun
+          chmod +x sharun
           
-          # Bundle everything: Python, GTK4, Libadwaita and their dependencies
-          # This converts the light AppDir into a standalone one
-          ./quick-sharun.sh GearLever.AppDir
+          # Bundle the AppDir. sharun will follow dependencies and create a portable environment.
+          # We use --p 1 for maximum portability (bundles almost everything except basic system libs)
+          ./sharun --dir GearLever.AppDir --bin GearLever.AppDir/usr/bin/gearlever --args "" -v --p 1
           
           # Create AppImage
           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
