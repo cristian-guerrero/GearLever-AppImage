@@ -73,6 +73,10 @@ export XDG_DATA_DIRS="\${HERE}/usr/share:\${XDG_DATA_DIRS:-/usr/local/share:/usr
 export GSETTINGS_SCHEMA_DIR="\${HERE}/usr/share/glib-2.0/schemas"
 export GI_TYPELIB_PATH="\${HERE}/usr/lib/x86_64-linux-gnu/girepository-1.0"
 
+# SSL Certificates Portability
+export SSL_CERT_FILE="\${HERE}/etc/ssl/certs/ca-certificates.crt"
+export CURL_CA_BUNDLE="\${HERE}/etc/ssl/certs/ca-certificates.crt"
+
 # Use the bundled python from sharun
 if [ -f "\${HERE}/bin/python3" ]; then
   EXEC="\${HERE}/bin/python3"
@@ -164,6 +168,7 @@ cp -ra /usr/lib/x86_64-linux-gnu/girepository-1.0/. "$APP_DIR/usr/lib/x86_64-lin
 # 2. Bundle the python interpreter and its dependencies.
 # We also bundle libadwaita/gtk4 as they are loaded via GI (dlopen)
 # Include extraction tools to ensure their library dependencies are bundled
+# Also include all Python dynamic modules to ensure SSL and other features work
 SHARUN_ARGS=(
   --dst-dir "$APP_DIR"
   --with-hooks
@@ -172,6 +177,18 @@ SHARUN_ARGS=(
   /usr/bin/python3
   /usr/lib/x86_64-linux-gnu/libadwaita-1.so.0
   /usr/lib/x86_64-linux-gnu/libgtk-4.so.1
+)
+
+# Add Python dynamic modules (like _ssl.so) to sharun
+if [ -d "/usr/lib/python3.12/lib-dynload" ]; then
+  SHARUN_ARGS+=( $(find /usr/lib/python3.12/lib-dynload/ -name "*.so") )
+fi
+
+# Add explicitly some common libs that might be missed
+SHARUN_ARGS+=(
+  /usr/lib/x86_64-linux-gnu/libssl.so.3
+  /usr/lib/x86_64-linux-gnu/libcrypto.so.3
+  /usr/lib/x86_64-linux-gnu/libsqlite3.so.0
 )
 
 if command -v 7zz >/dev/null 2>&1; then
@@ -183,6 +200,10 @@ if command -v unsquashfs >/dev/null 2>&1; then
 fi
 
 ./sharun lib4bin "${SHARUN_ARGS[@]}"
+
+# Copy CA certificates for SSL support
+mkdir -p "$APP_DIR/etc/ssl/certs"
+cp -L /etc/ssl/certs/ca-certificates.crt "$APP_DIR/etc/ssl/certs/ca-certificates.crt"
 
 # Final AppImage creation
 wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool

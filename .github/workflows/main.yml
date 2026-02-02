@@ -84,6 +84,10 @@ jobs:
           export GSETTINGS_SCHEMA_DIR="\${HERE}/usr/share/glib-2.0/schemas"
           export GI_TYPELIB_PATH="\${HERE}/usr/lib/x86_64-linux-gnu/girepository-1.0"
           
+          # SSL Certificates Portability
+          export SSL_CERT_FILE="\${HERE}/etc/ssl/certs/ca-certificates.crt"
+          export CURL_CA_BUNDLE="\${HERE}/etc/ssl/certs/ca-certificates.crt"
+          
           # Use the bundled python from sharun
           if [ -f "\${HERE}/bin/python3" ]; then
             EXEC="\${HERE}/bin/python3"
@@ -189,6 +193,7 @@ jobs:
           # --with-hooks: Includes extra libraries like GIO/GTK modules
           # --hard-links: Creates a portable 'python3' launcher in GearLever.AppDir/bin/
           # We also explicitly bundle libadwaita/gtk4 as they are loaded via GI (dlopen)
+          # We also include all Python dynamic modules to ensure SSL and other features work
           ./sharun lib4bin \
             --dst-dir GearLever.AppDir \
             --with-hooks \
@@ -197,8 +202,16 @@ jobs:
             /usr/bin/python3 \
             /usr/lib/x86_64-linux-gnu/libadwaita-1.so.0 \
             /usr/lib/x86_64-linux-gnu/libgtk-4.so.1 \
+            /usr/lib/x86_64-linux-gnu/libssl.so.3 \
+            /usr/lib/x86_64-linux-gnu/libcrypto.so.3 \
+            /usr/lib/x86_64-linux-gnu/libsqlite3.so.0 \
+            $(find /usr/lib/python3.12/lib-dynload/ -name "*.so") \
             $(which 7zz) \
             $(which unsquashfs)
+          
+          # Copy CA certificates for SSL support
+          mkdir -p GearLever.AppDir/etc/ssl/certs
+          cp -L /etc/ssl/certs/ca-certificates.crt GearLever.AppDir/etc/ssl/certs/ca-certificates.crt
           
           # Create AppImage
           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
