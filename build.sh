@@ -111,13 +111,9 @@ chmod +x sharun
 mkdir -p "$APP_DIR/usr/lib/python3.12"
 cp -ra /usr/lib/python3.12/. "$APP_DIR/usr/lib/python3.12/"
 
-# Also the dependencies installed via apt (gi, requests, xdg)
+# Also the dependencies installed via apt (gi, requests, xdg, dbus, magic)
 mkdir -p "$APP_DIR/usr/lib/python3/dist-packages"
-for pkg in gi requests xdg urllib3 idna charset_normalizer; do
-  if [ -d "/usr/lib/python3/dist-packages/$pkg" ]; then
-    cp -ra "/usr/lib/python3/dist-packages/$pkg" "$APP_DIR/usr/lib/python3/dist-packages/"
-  fi
-done
+cp -ra /usr/lib/python3/dist-packages/. "$APP_DIR/usr/lib/python3/dist-packages/"
 
 # 2. Bundle the python interpreter and its dependencies.
 # We also bundle libadwaita/gtk4 as they are loaded via GI (dlopen)
