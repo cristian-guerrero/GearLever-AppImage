@@ -46,7 +46,7 @@ chmod +x ../GearLever.AppDir/usr/bin/get_appimage_offset
 if command -v 7zz >/dev/null 2>&1; then
   cp $(command -v 7zz) ../GearLever.AppDir/usr/bin/7zz
 else
-  echo "Warning: 7zz not found. Please install 7zip."
+  echo "Warning: 7zz not found. Please install 7zip-standalone."
 fi
 
 if command -v unsquashfs >/dev/null 2>&1; then
