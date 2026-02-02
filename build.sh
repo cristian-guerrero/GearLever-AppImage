@@ -46,13 +46,20 @@ cat <<EOF > "$APP_DIR/AppRun"
 HERE="\$(dirname "\$(readlink -f "\${0}")")"
 export PYTHONPATH="\${HERE}/usr/share/gearlever:\${PYTHONPATH}"
 
+# Use the bundled python from sharun
+if [ -f "\${HERE}/bin/python3" ]; then
+  EXEC="\${HERE}/bin/python3"
+else
+  EXEC="python3"
+fi
+
 # If run with --integrate-self, it tries to integrate itself
 if [ "\$1" = "--integrate-self" ] && [ -n "\$APPIMAGE" ]; then
-   exec "\${HERE}/usr/bin/gearlever" --integrate "\$APPIMAGE"
+   exec "\$EXEC" "\${HERE}/usr/bin/gearlever" --integrate "\$APPIMAGE"
    exit 0
 fi
 
-exec "\${HERE}/usr/bin/gearlever" "\$@"
+exec "\$EXEC" "\${HERE}/usr/bin/gearlever" "\$@"
 EOF
 chmod +x "$APP_DIR/AppRun"
 
@@ -78,8 +85,16 @@ sed -i 's/Icon=.*/Icon=gearlever/' "$APP_DIR/gearlever.desktop"
 wget -q https://github.com/VHSgunzo/sharun/releases/download/v0.7.9/sharun-x86_64 -O sharun
 chmod +x sharun
 
-# Bundle the AppDir
-./sharun --dir "$APP_DIR" --bin "$APP_DIR/usr/bin/gearlever" --args "" -v --p 1
+# Bundle the python interpreter and its dependencies.
+# We also bundle libadwaita/gtk4 as they are loaded via GI (dlopen)
+./sharun lib4bin \
+  --dst-dir "$APP_DIR" \
+  --with-hooks \
+  --hard-links \
+  --verbose \
+  /usr/bin/python3 \
+  /usr/lib/x86_64-linux-gnu/libadwaita-1.so.0 \
+  /usr/lib/x86_64-linux-gnu/libgtk-4.so.1
 
 # Final AppImage creation
 wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool

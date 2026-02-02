@@ -65,13 +65,20 @@ jobs:
           HERE="\$(dirname "\$(readlink -f "\${0}")")"
           export PYTHONPATH="\${HERE}/usr/share/gearlever:\${PYTHONPATH}"
           
+          # Use the bundled python from sharun
+          if [ -f "\${HERE}/bin/python3" ]; then
+            EXEC="\${HERE}/bin/python3"
+          else
+            EXEC="python3"
+          fi
+          
           # If run with --integrate-self, it tries to integration itself
           if [ "\$1" = "--integrate-self" ] && [ -n "\$APPIMAGE" ]; then
-             exec "\${HERE}/usr/bin/gearlever" --integrate "\$APPIMAGE"
+             exec "\$EXEC" "\${HERE}/usr/bin/gearlever" --integrate "\$APPIMAGE"
              exit 0
           fi
           
-          exec "\${HERE}/usr/bin/gearlever" "\$@"
+          exec "\$EXEC" "\${HERE}/usr/bin/gearlever" "\$@"
           EOF
           chmod +x "$APP_DIR/AppRun"
           
@@ -112,9 +119,20 @@ jobs:
           wget -q https://github.com/VHSgunzo/sharun/releases/download/v0.7.9/sharun-x86_64 -O sharun
           chmod +x sharun
           
-          # Bundle the AppDir. sharun will follow dependencies and create a portable environment.
-          # We use --p 1 for maximum portability (bundles almost everything except basic system libs)
-          ./sharun --dir GearLever.AppDir --bin GearLever.AppDir/usr/bin/gearlever --args "" -v --p 1
+          # Bundle the python interpreter and its dependencies. 
+          # We use lib4bin subcommand with the correct flags:
+          # --dst-dir: The AppDir to bundle into
+          # --with-hooks: Includes extra libraries like GIO/GTK modules
+          # --hard-links: Creates a portable 'python3' launcher in GearLever.AppDir/bin/
+          # We also explicitly bundle libadwaita/gtk4 as they are loaded via GI (dlopen)
+          ./sharun lib4bin \
+            --dst-dir GearLever.AppDir \
+            --with-hooks \
+            --hard-links \
+            --verbose \
+            /usr/bin/python3 \
+            /usr/lib/x86_64-linux-gnu/libadwaita-1.so.0 \
+            /usr/lib/x86_64-linux-gnu/libgtk-4.so.1
           
           # Create AppImage
           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
