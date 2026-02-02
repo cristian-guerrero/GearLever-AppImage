@@ -72,6 +72,7 @@ APP_DIR="GearLever.AppDir"
 cat <<EOF > "$APP_DIR/AppRun"
 #!/bin/sh
 HERE="\$(dirname "\$(readlink -f "\${0}")")"
+export APPDIR="\${HERE}"
 
 # Portable Environment
 export PATH="\${HERE}/bin:\${HERE}/usr/bin:\${PATH}"
@@ -150,29 +151,44 @@ if [ -d "$APP_DIR/usr/share/glib-2.0/schemas" ]; then
 fi
 
 # 5. Patch hardcoded paths and fix bugs
-GEARLEVER_BIN="$APP_DIR/usr/bin/gearlever"
-if [ -f "$GEARLEVER_BIN" ]; then
-  echo "Patching hardcoded paths in $GEARLEVER_BIN"
-  sed -i "s|pkgdatadir = '.*'|pkgdatadir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'gearlever'))|" "$GEARLEVER_BIN"
-  sed -i "s|localedir = '.*'|localedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'locale'))|" "$GEARLEVER_BIN"
-fi
+echo "Applying patches to GearLever source..."
+
+# Patch hardcoded paths in the main script
+for GEARLEVER_BIN in $(find "$APP_DIR" -name "gearlever" -type f); do
+  if grep -q "pkgdatadir =" "$GEARLEVER_BIN"; then
+    echo "Patching hardcoded paths in $GEARLEVER_BIN"
+    sed -i "s|pkgdatadir = '.*'|pkgdatadir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'gearlever'))|" "$GEARLEVER_BIN"
+    sed -i "s|localedir = '.*'|localedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'locale'))|" "$GEARLEVER_BIN"
+  fi
+done
 
 # Patch URL validation to allow AppImage update info format
-UTILS_PY=$(find "$APP_DIR" -name "utils.py" | grep "gearlever/lib/utils.py" | head -n 1)
-if [ -n "$UTILS_PY" ]; then
-  echo "Patching URL validation in $UTILS_PY"
-  # Add gh-releases-zsync to valid URLs
-  sed -i "s|url_regex = re.compile(|if url.startswith('gh-releases-zsync\|'): return True\n    url_regex = re.compile(|" "$UTILS_PY"
-fi
+for UTILS_PY in $(find "$APP_DIR" -name "utils.py"); do
+  if grep -q "url_regex = re.compile(" "$UTILS_PY"; then
+    echo "Patching URL validation in $UTILS_PY"
+    # Using a more robust multi-line insertion
+    sed -i "/def url_is_valid(url):/a \    if url.startswith('gh-releases-zsync|'): return True" "$UTILS_PY"
+  fi
+done
 
 # Patch StaticFileUpdater to ignore AppImage update info format
-STATIC_FILE_UPDATER_PY=$(find "$APP_DIR" -name "StaticFileUpdater.py" | head -n 1)
-if [ -n "$STATIC_FILE_UPDATER_PY" ]; then
-  echo "Patching StaticFileUpdater in $STATIC_FILE_UPDATER_PY"
-  # Avoid StaticFileUpdater trying to handle gh-releases-zsync links
-  # Using @ as delimiter to avoid issues with | or /
-  sed -i "s@if not url_is_valid(url):@if not url_is_valid(url) or url.startswith('gh-releases-zsync|'):@" "$STATIC_FILE_UPDATER_PY"
-fi
+for STATIC_FILE_UPDATER_PY in $(find "$APP_DIR" -name "StaticFileUpdater.py"); do
+  if grep -q "def can_handle_link(url: str):" "$STATIC_FILE_UPDATER_PY"; then
+    echo "Patching StaticFileUpdater in $STATIC_FILE_UPDATER_PY"
+    # Insert ignore check right at the beginning of can_handle_link
+    sed -i "/def can_handle_link(url: str):/a \        if url.startswith('gh-releases-zsync|'): return False" "$STATIC_FILE_UPDATER_PY"
+  fi
+done
+
+# Patch AppImageProvider to find tools more reliably
+for APP_IMAGE_PROVIDER_PY in $(find "$APP_DIR" -name "AppImageProvider.py"); do
+  if grep -q "terminal.sandbox_sh(\['7zz'" "$APP_IMAGE_PROVIDER_PY"; then
+    echo "Patching AppImageProvider to fix tool paths in $APP_IMAGE_PROVIDER_PY"
+    # Ensure 7zz is called with absolute path if $APPDIR is set
+    sed -i "s/terminal.sandbox_sh(\['7zz'/terminal.sandbox_sh([os.environ.get('APPDIR', '') + '\/usr\/bin\/7zz' if os.environ.get('APPDIR') else '7zz'/" "$APP_IMAGE_PROVIDER_PY"
+    sed -i "s/terminal.sandbox_sh(\['unsquashfs'/terminal.sandbox_sh([os.environ.get('APPDIR', '') + '\/usr\/bin\/unsquashfs' if os.environ.get('APPDIR') else 'unsquashfs'/" "$APP_IMAGE_PROVIDER_PY"
+  fi
+done
 
 # 6. Build the AppImage via sharun (for portability)
 # We use sharun to bundle dependencies for immutable systems
