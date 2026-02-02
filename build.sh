@@ -43,13 +43,18 @@ exec "\${HERE}/usr/bin/gearlever" "\$@"
 EOF
 chmod +x "$APP_DIR/AppRun"
 
-# More aggressive icon detection
-ICON_PATH=$(find "$APP_DIR/usr/share/icons" -iname "*gearlever*" -name "*.png" | head -n 1)
+# Full search for icons
+ICON_PATH=$(find "$APP_DIR" -name "*gearlever*" -name "*.png" | head -n 1)
 if [ -z "$ICON_PATH" ]; then
-  ICON_PATH=$(find "$APP_DIR/usr/share/icons" -name "*.png" | head -n 1)
+  ICON_PATH=$(find "$APP_DIR" -name "*.png" | grep -v "appstream" | head -n 1)
 fi
 if [ -n "$ICON_PATH" ]; then
   cp "$ICON_PATH" "$APP_DIR/gearlever.png"
+  mkdir -p "$APP_DIR/usr/share/icons/hicolor/512x512/apps"
+  cp "$ICON_PATH" "$APP_DIR/usr/share/icons/hicolor/512x512/apps/gearlever.png"
+else
+  echo "Error: Icon not found"
+  exit 1
 fi
 
 cp "$APP_DIR/usr/share/applications/"*.desktop "$APP_DIR/gearlever.desktop"

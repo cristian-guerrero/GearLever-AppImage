@@ -67,26 +67,32 @@ jobs:
           chmod +x "$APP_DIR/AppRun"
           
           # 2. Copy desktop file and icons to root
-          echo "Listing contents of AppDir for debugging:"
-          ls -R "$APP_DIR/usr/share/icons" || echo "No icons found"
+          echo "Debugging AppDir structure..."
+          find "$APP_DIR" -maxdepth 4
           
           cp "$APP_DIR/usr/share/applications/"*.desktop "$APP_DIR/gearlever.desktop"
           
-          # More aggressive icon detection (case-insensitive and looking for any icon)
-          ICON_PATH=$(find "$APP_DIR/usr/share/icons" -iname "*gearlever*" -name "*.png" | head -n 1)
+          # Search everywhere for anything that looks like the app icon
+          echo "Searching for icons..."
+          ICON_PATH=$(find "$APP_DIR" -name "*gearlever*" -name "*.png" | head -n 1)
           if [ -z "$ICON_PATH" ]; then
-            ICON_PATH=$(find "$APP_DIR/usr/share/icons" -name "*.png" | head -n 1)
+            ICON_PATH=$(find "$APP_DIR" -name "*.png" | grep -v "appstream" | head -n 1)
           fi
           
           if [ -n "$ICON_PATH" ]; then
-            echo "Found icon at $ICON_PATH, copying to $APP_DIR/gearlever.png"
+            echo "Icon found at: $ICON_PATH"
             cp "$ICON_PATH" "$APP_DIR/gearlever.png"
+            # AppImage also likes having a copy in a common location
+            mkdir -p "$APP_DIR/usr/share/icons/hicolor/512x512/apps"
+            cp "$ICON_PATH" "$APP_DIR/usr/share/icons/hicolor/512x512/apps/gearlever.png"
           else
-            echo "WARNING: No icon found!"
+            echo "ERROR: No icon found in the entire AppDir!"
+            exit 1
           fi
           
-          # 3. Patch desktop file to match AppImage icon
+          # 3. Patch desktop file
           sed -i 's/Icon=.*/Icon=gearlever/' "$APP_DIR/gearlever.desktop"
+          echo "Desktop file Icon field set to gearlever"
 
       - name: Create AppImage
         run: |
