@@ -87,6 +87,14 @@ fi
 cp "$APP_DIR/usr/share/applications/"*.desktop "$APP_DIR/gearlever.desktop"
 sed -i 's/Icon=.*/Icon=gearlever/' "$APP_DIR/gearlever.desktop"
 
+# 5. Patch hardcoded paths (Meson hardcodes /usr/share/gearlever)
+GEARLEVER_BIN="$APP_DIR/usr/bin/gearlever"
+if [ -f "$GEARLEVER_BIN" ]; then
+  echo "Patching hardcoded paths in $GEARLEVER_BIN"
+  sed -i "s|pkgdatadir = '.*'|pkgdatadir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'gearlever'))|" "$GEARLEVER_BIN"
+  sed -i "s|localedir = '.*'|localedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'locale'))|" "$GEARLEVER_BIN"
+fi
+
 # 6. Build the AppImage via sharun (for portability)
 # We use sharun to bundle dependencies for immutable systems
 wget -q https://github.com/VHSgunzo/sharun/releases/download/v0.7.9/sharun-x86_64 -O sharun

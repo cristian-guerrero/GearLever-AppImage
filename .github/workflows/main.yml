@@ -113,9 +113,18 @@ jobs:
             exit 1
           fi
           
-          # 3. Patch desktop file
           sed -i 's/Icon=.*/Icon=gearlever/' "$APP_DIR/gearlever.desktop"
           echo "Desktop file Icon field set to gearlever"
+          
+          # 4. Patch hardcoded paths in the python entry point
+          # Meson hardcodes /usr/share/gearlever based on the prefix. 
+          # We need it to be relative to the AppImage mount point.
+          GEARLEVER_BIN="$APP_DIR/usr/bin/gearlever"
+          if [ -f "$GEARLEVER_BIN" ]; then
+            echo "Patching hardcoded paths in $GEARLEVER_BIN"
+            sed -i "s|pkgdatadir = '.*'|pkgdatadir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'gearlever'))|" "$GEARLEVER_BIN"
+            sed -i "s|localedir = '.*'|localedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'locale'))|" "$GEARLEVER_BIN"
+          fi
 
       - name: Create AppImage
         run: |
