@@ -37,6 +37,11 @@ tar -xzf gearlever.tar.gz -C source --strip-components=1
 cd source
 meson setup _build --prefix=/usr
 DESTDIR=../GearLever.AppDir ninja -C _build install
+
+# Install get_appimage_offset script
+cp build-aux/get_appimage_offset.sh ../GearLever.AppDir/usr/bin/get_appimage_offset
+chmod +x ../GearLever.AppDir/usr/bin/get_appimage_offset
+
 cd ..
 
 # 4. Finalize AppDir
@@ -46,6 +51,7 @@ cat <<EOF > "$APP_DIR/AppRun"
 HERE="\$(dirname "\$(readlink -f "\${0}")")"
 
 # Portable Python Environment
+export PATH="\${HERE}/usr/bin:\${PATH}"
 export PYTHONHOME="\${HERE}/usr"
 export PYTHONPATH="\${HERE}/usr/share/gearlever:\${HERE}/usr/lib/python3.12:\${HERE}/usr/lib/python3/dist-packages:\${PYTHONPATH}"
 

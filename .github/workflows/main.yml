@@ -55,6 +55,10 @@ jobs:
           cd build/source
           meson setup _build --prefix=/usr
           DESTDIR=$GITHUB_WORKSPACE/build/GearLever.AppDir ninja -C _build install
+          
+          # Install get_appimage_offset script
+          cp build-aux/get_appimage_offset.sh $GITHUB_WORKSPACE/build/GearLever.AppDir/usr/bin/get_appimage_offset
+          chmod +x $GITHUB_WORKSPACE/build/GearLever.AppDir/usr/bin/get_appimage_offset
 
       - name: Finalize AppDir
         run: |
@@ -67,6 +71,7 @@ jobs:
           HERE="\$(dirname "\$(readlink -f "\${0}")")"
           
           # Portable Python Environment
+          export PATH="\${HERE}/usr/bin:\${PATH}"
           export PYTHONHOME="\${HERE}/usr"
           export PYTHONPATH="\${HERE}/usr/share/gearlever:\${HERE}/usr/lib/python3.12:\${HERE}/usr/lib/python3/dist-packages:\${PYTHONPATH}"
           
