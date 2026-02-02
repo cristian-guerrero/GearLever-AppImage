@@ -150,45 +150,25 @@ if [ -d "$APP_DIR/usr/share/glib-2.0/schemas" ]; then
    glib-compile-schemas "$APP_DIR/usr/share/glib-2.0/schemas"
 fi
 
-# 5. Patch hardcoded paths and fix bugs
+# Patch hardcoded paths and fix bugs
 echo "Applying patches to GearLever source..."
 
 # Patch hardcoded paths in the main script
-for GEARLEVER_BIN in $(find "$APP_DIR" -name "gearlever" -type f); do
-  if grep -q "pkgdatadir =" "$GEARLEVER_BIN"; then
-    echo "Patching hardcoded paths in $GEARLEVER_BIN"
-    sed -i "s|pkgdatadir = '.*'|pkgdatadir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'gearlever'))|" "$GEARLEVER_BIN"
-    sed -i "s|localedir = '.*'|localedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'locale'))|" "$GEARLEVER_BIN"
-  fi
-done
+find "$APP_DIR" -name "gearlever" -type f -exec sed -i "s|pkgdatadir = '.*'|pkgdatadir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'gearlever'))|" {} +
+find "$APP_DIR" -name "gearlever" -type f -exec sed -i "s|localedir = '.*'|localedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'locale'))|" {} +
 
 # Patch URL validation to allow AppImage update info format
-for UTILS_PY in $(find "$APP_DIR" -name "utils.py"); do
-  if grep -q "url_regex = re.compile(" "$UTILS_PY"; then
-    echo "Patching URL validation in $UTILS_PY"
-    # Using a more robust multi-line insertion
-    sed -i "/def url_is_valid(url):/a \    if url.startswith('gh-releases-zsync|'): return True" "$UTILS_PY"
-  fi
-done
+find "$APP_DIR" -name "utils.py" -exec sed -i "/def url_is_valid(url):/a \    if isinstance(url, str) and url.startswith('gh-releases-zsync|'): return True" {} +
 
 # Patch StaticFileUpdater to ignore AppImage update info format
-for STATIC_FILE_UPDATER_PY in $(find "$APP_DIR" -name "StaticFileUpdater.py"); do
-  if grep -q "def can_handle_link(url: str):" "$STATIC_FILE_UPDATER_PY"; then
-    echo "Patching StaticFileUpdater in $STATIC_FILE_UPDATER_PY"
-    # Insert ignore check right at the beginning of can_handle_link
-    sed -i "/def can_handle_link(url: str):/a \        if url.startswith('gh-releases-zsync|'): return False" "$STATIC_FILE_UPDATER_PY"
-  fi
-done
+find "$APP_DIR" -name "StaticFileUpdater.py" -exec sed -i "/def get_url_headers(url):/a \        if isinstance(url, str) and url.startswith('gh-releases-zsync|'): return {}" {} +
+find "$APP_DIR" -name "StaticFileUpdater.py" -exec sed -i "/def can_handle_link(url: str):/a \        if isinstance(url, str) and url.startswith('gh-releases-zsync|'): return False" {} +
 
-# Patch AppImageProvider to find tools more reliably
-for APP_IMAGE_PROVIDER_PY in $(find "$APP_DIR" -name "AppImageProvider.py"); do
-  if grep -q "terminal.sandbox_sh(\['7zz'" "$APP_IMAGE_PROVIDER_PY"; then
-    echo "Patching AppImageProvider to fix tool paths in $APP_IMAGE_PROVIDER_PY"
-    # Ensure 7zz is called with absolute path if $APPDIR is set
-    sed -i "s/terminal.sandbox_sh(\['7zz'/terminal.sandbox_sh([os.environ.get('APPDIR', '') + '\/usr\/bin\/7zz' if os.environ.get('APPDIR') else '7zz'/" "$APP_IMAGE_PROVIDER_PY"
-    sed -i "s/terminal.sandbox_sh(\['unsquashfs'/terminal.sandbox_sh([os.environ.get('APPDIR', '') + '\/usr\/bin\/unsquashfs' if os.environ.get('APPDIR') else 'unsquashfs'/" "$APP_IMAGE_PROVIDER_PY"
-  fi
-done
+# Patch AppImageProvider to find tools more reliably by using absolute paths
+find "$APP_DIR" -name "AppImageProvider.py" -exec sed -i "s@'7zz'@os.environ.get('APPDIR', '') + '/usr/bin/7zz' if os.environ.get('APPDIR') else '7zz'@g" {} +
+find "$APP_DIR" -name "AppImageProvider.py" -exec sed -i "s@\"7zz\"@os.environ.get('APPDIR', '') + '/usr/bin/7zz' if os.environ.get('APPDIR') else '7zz'@g" {} +
+find "$APP_DIR" -name "AppImageProvider.py" -exec sed -i "s@'unsquashfs'@os.environ.get('APPDIR', '') + '/usr/bin/unsquashfs' if os.environ.get('APPDIR') else 'unsquashfs'@g" {} +
+find "$APP_DIR" -name "AppImageProvider.py" -exec sed -i "s@\"unsquashfs\"@os.environ.get('APPDIR', '') + '/usr/bin/unsquashfs' if os.environ.get('APPDIR') else 'unsquashfs'@g" {} +
 
 # 6. Build the AppImage via sharun (for portability)
 # We use sharun to bundle dependencies for immutable systems
