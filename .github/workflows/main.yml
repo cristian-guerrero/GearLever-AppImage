@@ -74,10 +74,13 @@ jobs:
           #!/bin/sh
           HERE="\$(dirname "\$(readlink -f "\${0}")")"
           
+          # Portable Environment
+          export PATH="\${HERE}/bin:\${HERE}/usr/bin:\${PATH}"
+          export LD_LIBRARY_PATH="\${HERE}/usr/lib:\${HERE}/usr/lib/x86_64-linux-gnu:\${LD_LIBRARY_PATH}"
+          
           # Portable Python Environment
-          export PATH="\${HERE}/usr/bin:\${PATH}"
           export PYTHONHOME="\${HERE}/usr"
-          export PYTHONPATH="\${HERE}/usr/share/gearlever:\${HERE}/usr/lib/python3.12:\${HERE}/usr/lib/python3/dist-packages:\${PYTHONPATH}"
+          export PYTHONPATH="\${HERE}/usr/share/gearlever:\${HERE}/usr/lib/python3.12:\${HERE}/usr/lib/python3.12/lib-dynload:\${HERE}/usr/lib/python3/dist-packages:\${PYTHONPATH}"
           
           # GTK/GIO Portability
           export XDG_DATA_DIRS="\${HERE}/usr/share:\${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
