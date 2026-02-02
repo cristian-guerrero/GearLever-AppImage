@@ -106,6 +106,16 @@ jobs:
       - name: Create AppImage
         run: |
           cd build
+          
+          # Use a tool specifically designed for bundling GTK/Python apps
+          wget -q https://raw.githubusercontent.com/base-pkgforge/pkgforge-scripts/main/sharun-utils/quick-sharun.sh
+          chmod +x quick-sharun.sh
+          
+          # Bundle everything: Python, GTK4, Libadwaita and their dependencies
+          # This converts the light AppDir into a standalone one
+          ./quick-sharun.sh GearLever.AppDir
+          
+          # Create AppImage
           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
           chmod +x appimagetool
           
