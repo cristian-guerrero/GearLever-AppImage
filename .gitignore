@@ -1,0 +1,7 @@
+build/
+*.AppImage
+*.zsync
+appimagetool
+ sharun
+*.tar.gz
+GearLever.AppDir/

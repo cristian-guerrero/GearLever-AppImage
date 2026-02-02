@@ -1,0 +1,113 @@
+name: Build GearLever AppImage
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '0 5 * * *' # 5 AM UTC daily
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04 # Use a modern Ubuntu for GTK4/Libadwaita tools
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            meson ninja-build python3-gi python3-requests python3-xdg \
+            libgtk-4-dev libadwaita-1-dev appstream \
+            jq wget curl libfuse2 \
+            gettext
+
+      - name: Download Source & Prepare
+        id: prepare
+        run: |
+          REPO="mijorus/gearlever"
+          API_URL="https://api.github.com/repos/$REPO/releases/latest"
+          VERSION=$(curl -s "$API_URL" | jq -r '.tag_name')
+          URL=$(curl -s "$API_URL" | jq -r '.tarball_url')
+          
+          mkdir -p build/source
+          wget -q "$URL" -O build/gearlever.tar.gz
+          tar -xzf build/gearlever.tar.gz -C build/source --strip-components=1
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build and Install to AppDir
+        run: |
+          cd build/source
+          meson setup _build --prefix=/usr
+          DESTDIR=$GITHUB_WORKSPACE/build/GearLever.AppDir ninja -C _build install
+
+      - name: Finalize AppDir
+        run: |
+          cd build
+          APP_DIR="GearLever.AppDir"
+          
+          # 1. Create AppRun (Wrapper to handle libraries)
+          cat <<EOF > "$APP_DIR/AppRun"
+          #!/bin/sh
+          HERE="\$(dirname "\$(readlink -f "\${0}")")"
+          export PYTHONPATH="\${HERE}/usr/share/gearlever:\${PYTHONPATH}"
+          
+          # If run with --integrate-self, it tries to integration itself
+          if [ "\$1" = "--integrate-self" ] && [ -n "\$APPIMAGE" ]; then
+             exec "\${HERE}/usr/bin/gearlever" --integrate "\$APPIMAGE"
+             exit 0
+          fi
+          
+          exec "\${HERE}/usr/bin/gearlever" "\$@"
+          EOF
+          chmod +x "$APP_DIR/AppRun"
+          
+          # 2. Copy desktop file and icons to root
+          cp "$APP_DIR/usr/share/applications/"*.desktop "$APP_DIR/gearlever.desktop"
+          cp "$APP_DIR/usr/share/icons/hicolor/512x512/apps/"*.png "$APP_DIR/gearlever.png" || true
+          
+          # 3. Patch desktop file to match AppImage icon
+          sed -i 's/Icon=.*/Icon=gearlever/' "$APP_DIR/gearlever.desktop"
+
+      - name: Create AppImage
+        run: |
+          cd build
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+          chmod +x appimagetool
+          
+          export ARCH=x86_64
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          
+          REPO_OWNER=$(echo $GITHUB_REPOSITORY | cut -d'/' -f1)
+          REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)
+          UPDATE_INFO="gh-releases-zsync|\${REPO_OWNER}|\${REPO_NAME}|latest|GearLever-x86_64.AppImage.zsync"
+          
+          ./appimagetool -u "\$UPDATE_INFO" GearLever.AppDir GearLever-x86_64.AppImage
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.prepare.outputs.version }}
+          name: GearLever ${{ steps.prepare.outputs.version }}
+          body: |
+            Automated build of GearLever AppImage.
+            Use `./GearLever-x86_64.AppImage --integrate-self` to install it into your system using its own logic.
+          files: build/*.AppImage*
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Latest Tag
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest Release
+          body: "GearLever Version: ${{ steps.prepare.outputs.version }}"
+          files: build/*.AppImage*
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
