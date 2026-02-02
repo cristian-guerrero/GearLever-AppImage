@@ -59,11 +59,18 @@ jobs:
           cd build
           APP_DIR="GearLever.AppDir"
           
-          # 1. Create AppRun (Wrapper to handle libraries)
+          # 1. Create AppRun (Wrapper to handle libraries and Python environment)
           cat <<EOF > "$APP_DIR/AppRun"
           #!/bin/sh
           HERE="\$(dirname "\$(readlink -f "\${0}")")"
-          export PYTHONPATH="\${HERE}/usr/share/gearlever:\${PYTHONPATH}"
+          
+          # Portable Python Environment
+          export PYTHONHOME="\${HERE}/usr"
+          export PYTHONPATH="\${HERE}/usr/share/gearlever:\${HERE}/usr/lib/python3.12:\${HERE}/usr/lib/python3/dist-packages:\${PYTHONPATH}"
+          
+          # GTK/GIO Portability
+          export GSETTINGS_SCHEMA_DIR="\${HERE}/usr/share/glib-2.0/schemas"
+          export XDG_DATA_DIRS="\${HERE}/usr/share:\${XDG_DATA_DIRS}"
           
           # Use the bundled python from sharun
           if [ -f "\${HERE}/bin/python3" ]; then
@@ -114,6 +121,19 @@ jobs:
         run: |
           cd build
           
+          # 1. Bundle Python Standard Library and essential site-packages
+          # sharun bundles binaries, but we need the .py files for Python to function
+          mkdir -p GearLever.AppDir/usr/lib/python3.12
+          cp -ra /usr/lib/python3.12/. GearLever.AppDir/usr/lib/python3.12/
+          
+          # Also the dependencies installed via apt (gi, requests, xdg)
+          mkdir -p GearLever.AppDir/usr/lib/python3/dist-packages
+          for pkg in gi requests xdg urllib3 idna charset_normalizer; do
+            if [ -d "/usr/lib/python3/dist-packages/$pkg" ]; then
+              cp -ra "/usr/lib/python3/dist-packages/$pkg" GearLever.AppDir/usr/lib/python3/dist-packages/
+            fi
+          done
+
           # Use sharun to bundle everything: Python, GTK4, Libadwaita and their dependencies
           # This ensures the AppImage is standalone for immutable systems like NixOS/SteamOS
           wget -q https://github.com/VHSgunzo/sharun/releases/download/v0.7.9/sharun-x86_64 -O sharun

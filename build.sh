@@ -44,7 +44,14 @@ APP_DIR="GearLever.AppDir"
 cat <<EOF > "$APP_DIR/AppRun"
 #!/bin/sh
 HERE="\$(dirname "\$(readlink -f "\${0}")")"
-export PYTHONPATH="\${HERE}/usr/share/gearlever:\${PYTHONPATH}"
+
+# Portable Python Environment
+export PYTHONHOME="\${HERE}/usr"
+export PYTHONPATH="\${HERE}/usr/share/gearlever:\${HERE}/usr/lib/python3.12:\${HERE}/usr/lib/python3/dist-packages:\${PYTHONPATH}"
+
+# GTK/GIO Portability
+export GSETTINGS_SCHEMA_DIR="\${HERE}/usr/share/glib-2.0/schemas"
+export XDG_DATA_DIRS="\${HERE}/usr/share:\${XDG_DATA_DIRS}"
 
 # Use the bundled python from sharun
 if [ -f "\${HERE}/bin/python3" ]; then
@@ -85,7 +92,20 @@ sed -i 's/Icon=.*/Icon=gearlever/' "$APP_DIR/gearlever.desktop"
 wget -q https://github.com/VHSgunzo/sharun/releases/download/v0.7.9/sharun-x86_64 -O sharun
 chmod +x sharun
 
-# Bundle the python interpreter and its dependencies.
+# 1. Bundle Python Standard Library and essential site-packages
+# sharun bundles binaries, but we need the .py files for Python to function
+mkdir -p "$APP_DIR/usr/lib/python3.12"
+cp -ra /usr/lib/python3.12/. "$APP_DIR/usr/lib/python3.12/"
+
+# Also the dependencies installed via apt (gi, requests, xdg)
+mkdir -p "$APP_DIR/usr/lib/python3/dist-packages"
+for pkg in gi requests xdg urllib3 idna charset_normalizer; do
+  if [ -d "/usr/lib/python3/dist-packages/$pkg" ]; then
+    cp -ra "/usr/lib/python3/dist-packages/$pkg" "$APP_DIR/usr/lib/python3/dist-packages/"
+  fi
+done
+
+# 2. Bundle the python interpreter and its dependencies.
 # We also bundle libadwaita/gtk4 as they are loaded via GI (dlopen)
 ./sharun lib4bin \
   --dst-dir "$APP_DIR" \
