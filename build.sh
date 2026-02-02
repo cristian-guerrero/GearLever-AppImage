@@ -50,8 +50,8 @@ export PYTHONHOME="\${HERE}/usr"
 export PYTHONPATH="\${HERE}/usr/share/gearlever:\${HERE}/usr/lib/python3.12:\${HERE}/usr/lib/python3/dist-packages:\${PYTHONPATH}"
 
 # GTK/GIO Portability
+export XDG_DATA_DIRS="\${HERE}/usr/share:\${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 export GSETTINGS_SCHEMA_DIR="\${HERE}/usr/share/glib-2.0/schemas"
-export XDG_DATA_DIRS="\${HERE}/usr/share:\${XDG_DATA_DIRS}"
 
 # Use the bundled python from sharun
 if [ -f "\${HERE}/bin/python3" ]; then
@@ -86,6 +86,12 @@ fi
 
 cp "$APP_DIR/usr/share/applications/"*.desktop "$APP_DIR/gearlever.desktop"
 sed -i 's/Icon=.*/Icon=gearlever/' "$APP_DIR/gearlever.desktop"
+
+# Compile GSettings schemas
+if [ -d "$APP_DIR/usr/share/glib-2.0/schemas" ]; then
+   echo "Compiling GSettings schemas..."
+   glib-compile-schemas "$APP_DIR/usr/share/glib-2.0/schemas"
+fi
 
 # 5. Patch hardcoded paths (Meson hardcodes /usr/share/gearlever)
 GEARLEVER_BIN="$APP_DIR/usr/bin/gearlever"
