@@ -42,6 +42,19 @@ DESTDIR=../GearLever.AppDir ninja -C _build install
 cp build-aux/get_appimage_offset.sh ../GearLever.AppDir/usr/bin/get_appimage_offset
 chmod +x ../GearLever.AppDir/usr/bin/get_appimage_offset
 
+# Bundle extraction tools (7zz and unsquashfs)
+if command -v 7zz >/dev/null 2>&1; then
+  cp $(command -v 7zz) ../GearLever.AppDir/usr/bin/7zz
+else
+  echo "Warning: 7zz not found. Please install 7zip."
+fi
+
+if command -v unsquashfs >/dev/null 2>&1; then
+  cp $(command -v unsquashfs) ../GearLever.AppDir/usr/bin/unsquashfs
+else
+  echo "Warning: unsquashfs not found. Please install squashfs-tools."
+fi
+
 cd ..
 
 # 4. Finalize AppDir
@@ -131,14 +144,26 @@ cp -ra /usr/lib/x86_64-linux-gnu/girepository-1.0/. "$APP_DIR/usr/lib/x86_64-lin
 
 # 2. Bundle the python interpreter and its dependencies.
 # We also bundle libadwaita/gtk4 as they are loaded via GI (dlopen)
-./sharun lib4bin \
-  --dst-dir "$APP_DIR" \
-  --with-hooks \
-  --hard-links \
-  --verbose \
-  /usr/bin/python3 \
-  /usr/lib/x86_64-linux-gnu/libadwaita-1.so.0 \
+# Include extraction tools to ensure their library dependencies are bundled
+SHARUN_ARGS=(
+  --dst-dir "$APP_DIR"
+  --with-hooks
+  --hard-links
+  --verbose
+  /usr/bin/python3
+  /usr/lib/x86_64-linux-gnu/libadwaita-1.so.0
   /usr/lib/x86_64-linux-gnu/libgtk-4.so.1
+)
+
+if command -v 7zz >/dev/null 2>&1; then
+  SHARUN_ARGS+=( $(command -v 7zz) )
+fi
+
+if command -v unsquashfs >/dev/null 2>&1; then
+  SHARUN_ARGS+=( $(command -v unsquashfs) )
+fi
+
+./sharun lib4bin "${SHARUN_ARGS[@]}"
 
 # Final AppImage creation
 wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool

@@ -25,7 +25,7 @@ jobs:
             python3-pip \
             libgtk-4-dev libadwaita-1-dev appstream desktop-file-utils \
             jq wget curl libfuse2 \
-            gettext
+            gettext 7zip squashfs-tools
 
       - name: Download Source & Prepare
         id: prepare
@@ -59,6 +59,10 @@ jobs:
           # Install get_appimage_offset script
           cp build-aux/get_appimage_offset.sh $GITHUB_WORKSPACE/build/GearLever.AppDir/usr/bin/get_appimage_offset
           chmod +x $GITHUB_WORKSPACE/build/GearLever.AppDir/usr/bin/get_appimage_offset
+          
+          # Bundle extraction tools
+          cp /usr/bin/7zz $GITHUB_WORKSPACE/build/GearLever.AppDir/usr/bin/7zz
+          cp /usr/bin/unsquashfs $GITHUB_WORKSPACE/build/GearLever.AppDir/usr/bin/unsquashfs
 
       - name: Finalize AppDir
         run: |
@@ -179,7 +183,9 @@ jobs:
             --verbose \
             /usr/bin/python3 \
             /usr/lib/x86_64-linux-gnu/libadwaita-1.so.0 \
-            /usr/lib/x86_64-linux-gnu/libgtk-4.so.1
+            /usr/lib/x86_64-linux-gnu/libgtk-4.so.1 \
+            /usr/bin/7zz \
+            /usr/bin/unsquashfs
           
           # Create AppImage
           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
