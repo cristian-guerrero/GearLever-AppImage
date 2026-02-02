@@ -30,11 +30,20 @@ jobs:
         run: |
           REPO="mijorus/gearlever"
           API_URL="https://api.github.com/repos/$REPO/releases/latest"
-          VERSION=$(curl -s "$API_URL" | jq -r '.tag_name')
-          URL=$(curl -s "$API_URL" | jq -r '.tarball_url')
+          # Use GITHUB_TOKEN to avoid rate limits
+          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
+          VERSION=$(echo "$RESPONSE" | jq -r '.tag_name')
+          URL=$(echo "$RESPONSE" | jq -r '.tarball_url')
           
+          if [ "$VERSION" == "null" ] || [ -z "$VERSION" ]; then
+            echo "Error: Could not fetch version from API"
+            echo "Response: $RESPONSE"
+            exit 1
+          fi
+          
+          echo "Downloading version $VERSION from $URL"
           mkdir -p build/source
-          wget -q "$URL" -O build/gearlever.tar.gz
+          curl -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "$URL" -o build/gearlever.tar.gz
           tar -xzf build/gearlever.tar.gz -C build/source --strip-components=1
           
           echo "version=$VERSION" >> $GITHUB_OUTPUT

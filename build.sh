@@ -8,15 +8,28 @@ APP_DIR="GearLever.AppDir"
 
 # Fetch latest version from GitHub
 RELEASES_URL="https://api.github.com/repos/$REPO/releases/latest"
-VERSION=$(curl -s "$RELEASES_URL" | jq -r '.tag_name')
-DOWNLOAD_URL=$(curl -s "$RELEASES_URL" | jq -r '.tarball_url')
+# Check if GITHUB_TOKEN is available for authenticated requests
+CURL_OPTS=""
+if [ ! -z "$GITHUB_TOKEN" ]; then
+  CURL_OPTS="-H \"Authorization: token $GITHUB_TOKEN\""
+fi
+
+RESPONSE=$(curl -s $CURL_OPTS "$RELEASES_URL")
+VERSION=$(echo "$RESPONSE" | jq -r '.tag_name')
+DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.tarball_url')
+
+if [ "$VERSION" == "null" ] || [ -z "$VERSION" ]; then
+  echo "Error: Could not fetch version from API"
+  echo "Response: $RESPONSE"
+  exit 1
+fi
 
 echo "Building $APP_NAME version $VERSION..."
 
 # 2. Preparation
 mkdir -p build
 cd build
-wget -q --show-progress "$DOWNLOAD_URL" -O gearlever.tar.gz
+curl -L $CURL_OPTS "$DOWNLOAD_URL" -o gearlever.tar.gz
 mkdir -p source
 tar -xzf gearlever.tar.gz -C source --strip-components=1
 
