@@ -62,7 +62,9 @@ jobs:
           
           # Bundle extraction tools
           cp $(which 7zz) $GITHUB_WORKSPACE/build/GearLever.AppDir/usr/bin/7zz
+          chmod +x $GITHUB_WORKSPACE/build/GearLever.AppDir/usr/bin/7zz
           cp $(which unsquashfs) $GITHUB_WORKSPACE/build/GearLever.AppDir/usr/bin/unsquashfs
+          chmod +x $GITHUB_WORKSPACE/build/GearLever.AppDir/usr/bin/unsquashfs
 
       - name: Finalize AppDir
         run: |
@@ -162,6 +164,13 @@ jobs:
             echo "Patching hardcoded paths in $GEARLEVER_BIN"
             sed -i "s|pkgdatadir = '.*'|pkgdatadir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'gearlever'))|" "$GEARLEVER_BIN"
             sed -i "s|localedir = '.*'|localedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'locale'))|" "$GEARLEVER_BIN"
+          fi
+
+          # Patch URL validation to allow AppImage update info format
+          UTILS_PY=$(find "$APP_DIR" -name "utils.py" | grep "gearlever/lib/utils.py" | head -n 1)
+          if [ -n "$UTILS_PY" ]; then
+            echo "Patching URL validation in $UTILS_PY"
+            sed -i "s|url_regex = re.compile(|if url.startswith('gh-releases-zsync\|'): return True\n    url_regex = re.compile(|" "$UTILS_PY"
           fi
 
       - name: Create AppImage

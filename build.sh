@@ -45,12 +45,14 @@ chmod +x ../GearLever.AppDir/usr/bin/get_appimage_offset
 # Bundle extraction tools (7zz and unsquashfs)
 if command -v 7zz >/dev/null 2>&1; then
   cp $(command -v 7zz) ../GearLever.AppDir/usr/bin/7zz
+  chmod +x ../GearLever.AppDir/usr/bin/7zz
 else
   echo "Warning: 7zz not found. Please install 7zip-standalone."
 fi
 
 if command -v unsquashfs >/dev/null 2>&1; then
   cp $(command -v unsquashfs) ../GearLever.AppDir/usr/bin/unsquashfs
+  chmod +x ../GearLever.AppDir/usr/bin/unsquashfs
 else
   echo "Warning: unsquashfs not found. Please install squashfs-tools."
 fi
@@ -139,12 +141,20 @@ if [ -d "$APP_DIR/usr/share/glib-2.0/schemas" ]; then
    glib-compile-schemas "$APP_DIR/usr/share/glib-2.0/schemas"
 fi
 
-# 5. Patch hardcoded paths (Meson hardcodes /usr/share/gearlever)
+# 5. Patch hardcoded paths and fix bugs
 GEARLEVER_BIN="$APP_DIR/usr/bin/gearlever"
 if [ -f "$GEARLEVER_BIN" ]; then
   echo "Patching hardcoded paths in $GEARLEVER_BIN"
   sed -i "s|pkgdatadir = '.*'|pkgdatadir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'gearlever'))|" "$GEARLEVER_BIN"
   sed -i "s|localedir = '.*'|localedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'share', 'locale'))|" "$GEARLEVER_BIN"
+fi
+
+# Patch URL validation to allow AppImage update info format
+UTILS_PY=$(find "$APP_DIR" -name "utils.py" | grep "gearlever/lib/utils.py" | head -n 1)
+if [ -n "$UTILS_PY" ]; then
+  echo "Patching URL validation in $UTILS_PY"
+  # Add gh-releases-zsync to valid URLs
+  sed -i "s|url_regex = re.compile(|if url.startswith('gh-releases-zsync\|'): return True\n    url_regex = re.compile(|" "$UTILS_PY"
 fi
 
 # 6. Build the AppImage via sharun (for portability)
