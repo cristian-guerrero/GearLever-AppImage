@@ -43,18 +43,25 @@ cp build-aux/get_appimage_offset.sh ../GearLever.AppDir/usr/bin/get_appimage_off
 chmod +x ../GearLever.AppDir/usr/bin/get_appimage_offset
 
 # Bundle extraction tools (7zz and unsquashfs)
+echo "Bundling extraction tools..."
 if command -v 7zz >/dev/null 2>&1; then
   cp $(command -v 7zz) ../GearLever.AppDir/usr/bin/7zz
   chmod +x ../GearLever.AppDir/usr/bin/7zz
 else
-  echo "Warning: 7zz not found. Please install 7zip-standalone."
+  echo "Warning: 7zz not found. Downloading..."
+  wget -q https://github.com/ip7z/7zip/releases/download/24.09/7z2409-linux-x64.tar.xz -O 7z.tar.xz
+  tar -xf 7z.tar.xz 7zz
+  cp 7zz ../GearLever.AppDir/usr/bin/7zz
+  rm 7z.tar.xz 7zz
 fi
 
 if command -v unsquashfs >/dev/null 2>&1; then
   cp $(command -v unsquashfs) ../GearLever.AppDir/usr/bin/unsquashfs
   chmod +x ../GearLever.AppDir/usr/bin/unsquashfs
 else
-  echo "Warning: unsquashfs not found. Please install squashfs-tools."
+  echo "Warning: unsquashfs not found. Downloading from AppImageKit..."
+  wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/unsquashfs-x86_64 -O ../GearLever.AppDir/usr/bin/unsquashfs
+  chmod +x ../GearLever.AppDir/usr/bin/unsquashfs
 fi
 
 cd ..
@@ -157,6 +164,14 @@ if [ -n "$UTILS_PY" ]; then
   sed -i "s|url_regex = re.compile(|if url.startswith('gh-releases-zsync\|'): return True\n    url_regex = re.compile(|" "$UTILS_PY"
 fi
 
+# Patch StaticFileUpdater to ignore AppImage update info format
+STATIC_FILE_UPDATER_PY=$(find "$APP_DIR" -name "StaticFileUpdater.py" | head -n 1)
+if [ -n "$STATIC_FILE_UPDATER_PY" ]; then
+  echo "Patching StaticFileUpdater in $STATIC_FILE_UPDATER_PY"
+  # Avoid StaticFileUpdater trying to handle gh-releases-zsync links
+  sed -i "s|if not url_is_valid(url):|if not url_is_valid(url) or url.startswith('gh-releases-zsync\|'):|" "$STATIC_FILE_UPDATER_PY"
+fi
+
 # 6. Build the AppImage via sharun (for portability)
 # We use sharun to bundle dependencies for immutable systems
 wget -q https://github.com/VHSgunzo/sharun/releases/download/v0.7.9/sharun-x86_64 -O sharun
@@ -204,12 +219,13 @@ SHARUN_ARGS+=(
   /usr/lib/x86_64-linux-gnu/libsqlite3.so.0
 )
 
-if command -v 7zz >/dev/null 2>&1; then
-  SHARUN_ARGS+=( $(command -v 7zz) )
+# Use the tools we just copied/downloaded to ensure their dependencies are bundled
+if [ -f "$APP_DIR/usr/bin/7zz" ]; then
+  SHARUN_ARGS+=( "$APP_DIR/usr/bin/7zz" )
 fi
 
-if command -v unsquashfs >/dev/null 2>&1; then
-  SHARUN_ARGS+=( $(command -v unsquashfs) )
+if [ -f "$APP_DIR/usr/bin/unsquashfs" ]; then
+  SHARUN_ARGS+=( "$APP_DIR/usr/bin/unsquashfs" )
 fi
 
 ./sharun lib4bin "${SHARUN_ARGS[@]}"
