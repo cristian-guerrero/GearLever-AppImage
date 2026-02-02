@@ -43,8 +43,11 @@ exec "\${HERE}/usr/bin/gearlever" "\$@"
 EOF
 chmod +x "$APP_DIR/AppRun"
 
+# Improved Icon Detection
+find "$APP_DIR/usr/share/icons" -name "*gearlever*" -name "*.png" -exec cp {} "$APP_DIR/gearlever.png" \; -quit || \
+find "$APP_DIR/usr/share/icons" -name "*.png" -exec cp {} "$APP_DIR/gearlever.png" \; -quit || true
+
 cp "$APP_DIR/usr/share/applications/"*.desktop "$APP_DIR/gearlever.desktop"
-cp "$APP_DIR/usr/share/icons/hicolor/512x512/apps/"*.png "$APP_DIR/gearlever.png" || true
 sed -i 's/Icon=.*/Icon=gearlever/' "$APP_DIR/gearlever.desktop"
 
 # 6. Build the AppImage
