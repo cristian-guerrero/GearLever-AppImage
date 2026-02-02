@@ -90,22 +90,41 @@ exec "\$EXEC" "\${HERE}/usr/bin/gearlever" "\$@"
 EOF
 chmod +x "$APP_DIR/AppRun"
 
-# Full search for icons
-ICON_PATH=$(find "$APP_DIR" -name "*gearlever*" -name "*.png" | head -n 1)
-if [ -z "$ICON_PATH" ]; then
-  ICON_PATH=$(find "$APP_DIR" -name "*.png" | grep -v "appstream" | head -n 1)
-fi
-if [ -n "$ICON_PATH" ]; then
-  cp "$ICON_PATH" "$APP_DIR/gearlever.png"
-  mkdir -p "$APP_DIR/usr/share/icons/hicolor/512x512/apps"
-  cp "$ICON_PATH" "$APP_DIR/usr/share/icons/hicolor/512x512/apps/gearlever.png"
+# Icon handling
+ICON_SVG="source/data/icons/hicolor/scalable/apps/it.mijorus.gearlever.svg"
+if [ -f "$ICON_SVG" ]; then
+  echo "Using SVG icon from source..."
+  cp "$ICON_SVG" "$APP_DIR/gearlever.svg"
+  # Also copy to root as .DirIcon for AppImage standard
+  cp "$ICON_SVG" "$APP_DIR/.DirIcon"
+  mkdir -p "$APP_DIR/usr/share/icons/hicolor/scalable/apps"
+  cp "$ICON_SVG" "$APP_DIR/usr/share/icons/hicolor/scalable/apps/gearlever.svg"
 else
-  echo "Error: Icon not found"
-  exit 1
+  # Fallback to search
+  ICON_PATH=$(find "$APP_DIR" -name "*gearlever*" -name "*.png" | head -n 1)
+  if [ -z "$ICON_PATH" ]; then
+    ICON_PATH=$(find "$APP_DIR" -name "*.png" | grep -v "appstream" | head -n 1)
+  fi
+  if [ -n "$ICON_PATH" ]; then
+    cp "$ICON_PATH" "$APP_DIR/gearlever.png"
+    cp "$ICON_PATH" "$APP_DIR/.DirIcon"
+    mkdir -p "$APP_DIR/usr/share/icons/hicolor/512x512/apps"
+    cp "$ICON_PATH" "$APP_DIR/usr/share/icons/hicolor/512x512/apps/gearlever.png"
+  else
+    echo "Error: Icon not found"
+    exit 1
+  fi
 fi
 
 cp "$APP_DIR/usr/share/applications/"*.desktop "$APP_DIR/gearlever.desktop"
 sed -i 's/Icon=.*/Icon=gearlever/' "$APP_DIR/gearlever.desktop"
+# Force a clean name and add version to metadata
+sed -i 's/^Name=.*/Name=Gear Lever/' "$APP_DIR/gearlever.desktop"
+
+# Add version to desktop file to avoid GearLever using MD5 hash as version suffix
+if ! grep -q "X-AppImage-Version=" "$APP_DIR/gearlever.desktop"; then
+  echo "X-AppImage-Version=$VERSION" >> "$APP_DIR/gearlever.desktop"
+fi
 
 # Compile GSettings schemas
 if [ -d "$APP_DIR/usr/share/glib-2.0/schemas" ]; then

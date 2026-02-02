@@ -113,26 +113,39 @@ jobs:
           
           cp "$APP_DIR/usr/share/applications/"*.desktop "$APP_DIR/gearlever.desktop"
           
-          # Search everywhere for anything that looks like the app icon
-          echo "Searching for icons..."
-          ICON_PATH=$(find "$APP_DIR" -name "*gearlever*" -name "*.png" | head -n 1)
-          if [ -z "$ICON_PATH" ]; then
-            ICON_PATH=$(find "$APP_DIR" -name "*.png" | grep -v "appstream" | head -n 1)
-          fi
-          
-          if [ -n "$ICON_PATH" ]; then
-            echo "Icon found at: $ICON_PATH"
-            cp "$ICON_PATH" "$APP_DIR/gearlever.png"
-            # AppImage also likes having a copy in a common location
-            mkdir -p "$APP_DIR/usr/share/icons/hicolor/512x512/apps"
-            cp "$ICON_PATH" "$APP_DIR/usr/share/icons/hicolor/512x512/apps/gearlever.png"
+          # Icon handling
+          ICON_SVG="source/data/icons/hicolor/scalable/apps/it.mijorus.gearlever.svg"
+          if [ -f "$ICON_SVG" ]; then
+            echo "Using SVG icon from source..."
+            cp "$ICON_SVG" "$APP_DIR/gearlever.svg"
+            cp "$ICON_SVG" "$APP_DIR/.DirIcon"
+            mkdir -p "$APP_DIR/usr/share/icons/hicolor/scalable/apps"
+            cp "$ICON_SVG" "$APP_DIR/usr/share/icons/hicolor/scalable/apps/gearlever.svg"
           else
-            echo "ERROR: No icon found in the entire AppDir!"
-            exit 1
+            # Search everywhere for anything that looks like the app icon
+            echo "Searching for icons..."
+            ICON_PATH=$(find "$APP_DIR" -name "*gearlever*" -name "*.png" | head -n 1)
+            if [ -z "$ICON_PATH" ]; then
+              ICON_PATH=$(find "$APP_DIR" -name "*.png" | grep -v "appstream" | head -n 1)
+            fi
+            
+            if [ -n "$ICON_PATH" ]; then
+              echo "Icon found at: $ICON_PATH"
+              cp "$ICON_PATH" "$APP_DIR/gearlever.png"
+              cp "$ICON_PATH" "$APP_DIR/.DirIcon"
+              # AppImage also likes having a copy in a common location
+              mkdir -p "$APP_DIR/usr/share/icons/hicolor/512x512/apps"
+              cp "$ICON_PATH" "$APP_DIR/usr/share/icons/hicolor/512x512/apps/gearlever.png"
+            else
+              echo "ERROR: No icon found in the entire AppDir!"
+              exit 1
+            fi
           fi
           
           sed -i 's/Icon=.*/Icon=gearlever/' "$APP_DIR/gearlever.desktop"
-          echo "Desktop file Icon field set to gearlever"
+          sed -i 's/^Name=.*/Name=Gear Lever/' "$APP_DIR/gearlever.desktop"
+          echo "X-AppImage-Version=${{ steps.prepare.outputs.version }}" >> "$APP_DIR/gearlever.desktop"
+          echo "Desktop file Icon and Name fields updated, version set to ${{ steps.prepare.outputs.version }}"
           
           # 4. Patch hardcoded paths in the python entry point
           # Meson hardcodes /usr/share/gearlever based on the prefix. 
